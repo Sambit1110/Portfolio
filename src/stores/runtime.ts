@@ -27,6 +27,9 @@ export const runtime = {
   },
   // Touch joystick, in screen space: x right, y up, length 0..1 (analog).
   joystick: { x: 0, y: 0 },
+  // Guided tour: where the robot should walk this frame, and how hard (0..1).
+  // Set by the tour driver, read by the player controller; null otherwise.
+  autopilot: null as { x: number; z: number; throttle: number } | null,
   // Mirrors prefers-reduced-motion: ambient motion is stilled and camera glides
   // become cuts. Kept in sync by useReducedMotionSync.
   reducedMotion: false,

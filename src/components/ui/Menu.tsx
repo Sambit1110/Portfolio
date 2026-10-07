@@ -11,6 +11,7 @@ export function Menu() {
   const travelTo = useWorldStore((s) => s.travelTo);
   const setPageView = useWorldStore((s) => s.setPageView);
   const showVista = useWorldStore((s) => s.showVista);
+  const startTour = useWorldStore((s) => s.startTour);
 
   const blurAfter = (action: () => void) => () => {
     action();
@@ -65,13 +66,20 @@ export function Menu() {
         </button>
         <button
           type="button"
+          onClick={blurAfter(startTour)}
+          className="w-full touch-manipulation rounded-xl px-3 py-2 pointer-coarse:py-3 text-left font-medium transition hover:bg-sand/50 focus-visible:bg-sand/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-cyan-ink"
+        >
+          Take 45s tour
+        </button>
+        <button
+          type="button"
           onClick={() => setPageView(true)}
           className="w-full touch-manipulation rounded-xl px-3 py-2 pointer-coarse:py-3 text-left font-medium transition hover:bg-sand/50 focus-visible:bg-sand/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-cyan-ink"
         >
           View as a page
         </button>
         <p className="px-3 pt-2 pb-2 text-xs leading-relaxed text-rock">
-          Move with WASD or arrow keys · E or Enter to interact · Esc to close or return
+          Move with WASD or arrow keys · E or Enter to interact · Esc to close, return or end the tour
         </p>
       </div>
     </nav>

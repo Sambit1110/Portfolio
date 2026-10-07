@@ -11,6 +11,7 @@ import { InteractionPrompt } from "./InteractionPrompt";
 import { Menu } from "./Menu";
 import { SoundToggle } from "./SoundToggle";
 import { DiscoveryToast, VisitedZones } from "./VisitedZones";
+import { GuidedTourOverlay } from "./GuidedTour";
 import { ContentPanel } from "./panels/ContentPanel";
 import { InteractButton } from "./touch/InteractButton";
 import { Joystick } from "./touch/Joystick";
@@ -92,6 +93,7 @@ export function Hud() {
         {touch ? <InteractButton /> : <InteractionPrompt />}
         <ViewWorldHint touch={touch} />
         <DiscoveryToast />
+        <GuidedTourOverlay touch={touch} />
       </div>
       <div className="pointer-events-auto">
         <ContentPanel />

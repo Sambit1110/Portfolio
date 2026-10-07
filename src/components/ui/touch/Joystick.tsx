@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type PointerEvent } from "react";
 import { runtime } from "@/stores/runtime";
+import { useWorldStore } from "@/stores/worldStore";
 
 // Knob travel in CSS pixels, and the share of it that counts as "no input".
 const MAX_RADIUS = 46;
@@ -48,6 +49,9 @@ export function Joystick({ enabled }: { enabled: boolean }) {
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (!enabled || pointer.current !== null) return;
+    // Touching the stick takes back control from the guided tour at once.
+    const store = useWorldStore.getState();
+    if (store.guidedTour?.phase === "touring") store.endTour(false);
     event.currentTarget.setPointerCapture(event.pointerId);
     pointer.current = event.pointerId;
     origin.current = { x: event.clientX, y: event.clientY };

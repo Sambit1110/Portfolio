@@ -6,7 +6,7 @@ import { CapsuleCollider, RigidBody, type RapierRigidBody } from "@react-three/r
 import { CoefficientCombineRule } from "@dimforge/rapier3d-compat";
 import { CAMERA, PLAYER } from "@/config/world";
 import { Controls } from "@/config/controls";
-import { isInputLocked, useWorldStore } from "@/stores/worldStore";
+import { isInputLocked, isTouring, useWorldStore } from "@/stores/worldStore";
 import { runtime, setPoint } from "@/stores/runtime";
 import { RobotModel, type RobotMotion } from "./RobotModel";
 
@@ -72,13 +72,21 @@ export function Player({ ref }: PlayerProps) {
         throttle = Math.min(Math.hypot(stick.x, stick.y), 1);
       }
     }
+    // Guided tour: steer toward the driver's waypoint as if the stick were held
+    // that way, so walking, turning, gait and collisions behave exactly as usual.
+    const autopilot = runtime.autopilot;
+    if (autopilot && isTouring()) {
+      const at = rb.translation();
+      input.set(autopilot.x - at.x, 0, autopilot.z - at.z);
+      throttle = autopilot.throttle;
+    }
     // Normalise so diagonals aren't faster.
     if (input.lengthSq() > 0) {
       input.normalize().multiplyScalar(PLAYER.speed * throttle);
       runtime.player.hasMoved = true;
       // Moving ends a menu-requested vista.
       const store = useWorldStore.getState();
-      if (store.vistaRequested) store.dismissVista();
+      if (store.vistaRequested && !isTouring()) store.dismissVista();
     }
 
     // Ease horizontal velocity toward the target; leave vertical to gravity.

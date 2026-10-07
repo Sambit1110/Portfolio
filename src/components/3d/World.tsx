@@ -15,6 +15,7 @@ import { InteractionTracker } from "./interaction/InteractionTracker";
 import { DustTrail } from "./player/DustTrail";
 import { Player } from "./player/Player";
 import { Sparkles } from "./Sparkles";
+import { TourDriver } from "./TourDriver";
 import { WindDriver } from "./WindDriver";
 
 
@@ -50,6 +51,7 @@ export function World() {
       <ReadySignal />
       <AudioDriver />
       <InteractionTracker />
+      <TourDriver />
       <FollowCamera target={player} />
     </>
   );

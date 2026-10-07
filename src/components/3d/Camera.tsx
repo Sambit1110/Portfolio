@@ -4,6 +4,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { PerspectiveCamera } from "@react-three/drei";
 import { CAMERA, PLAYER } from "@/config/world";
 import { INTERACTABLE_BY_KEY, targetKey } from "@/lib/interactables";
+import { TOUR_STOPS } from "@/lib/tour";
 import { useWorldStore } from "@/stores/worldStore";
 import { runtime, setPoint } from "@/stores/runtime";
 
@@ -21,6 +22,10 @@ const ZONE_PULL = 0.35;
 // or south on phones so it sits above the bottom sheet.
 const PANEL_SHIFT = 3.2;
 const SHEET_SHIFT = 4;
+// Guided tour: while the robot pauses at a stop, the view leans gently toward
+// the landmark (less than for a panel, and with no room to make for one).
+const TOUR_PULL = 0.3;
+const TOUR_ZOOM = 0.9;
 // Fog distances at play distance; scaled with the camera so the vista stays clear.
 const FOG = { near: 50, far: 105 };
 
@@ -63,7 +68,7 @@ export function FollowCamera({ target }: FollowCameraProps) {
   const focusVelocity = useRef(new THREE.Vector3());
   // Eased 0..1 progress toward the open panel's target, remembered on close so
   // the return glides back from where it was.
-  const panel = useRef({ progress: 0, x: 0, z: 0 });
+  const panel = useRef({ progress: 0, x: 0, z: 0, tour: false });
   // Vista progress 0 (play) .. 1 (vista); starts in the vista for the arrival shot.
   const vista = useRef({ progress: 1, introTime: 0 });
   // Taller-than-wide screens pull back in proportion, up to portraitZoomOut on
@@ -97,19 +102,24 @@ export function FollowCamera({ target }: FollowCameraProps) {
     ahead.current.lerp(desiredAhead, damp(CAMERA.lookAheadSpeed, dt));
     goal.add(ahead.current);
 
-    const { active, vistaRequested } = useWorldStore.getState();
+    const { active, vistaRequested, guidedTour } = useWorldStore.getState();
     const reduced = runtime.reducedMotion;
     const opened = active ? INTERACTABLE_BY_KEY.get(targetKey(active)) : undefined;
+    const tourStop = guidedTour?.phase === "touring" && guidedTour.arrived ? TOUR_STOPS[guidedTour.stop] : undefined;
+    const focusPoint = opened?.position ?? tourStop?.focus;
     const pf = panel.current;
-    if (opened) [pf.x, pf.z] = opened.position;
-    pf.progress = THREE.MathUtils.clamp(pf.progress + (opened ? dt / PANEL_IN : -dt / PANEL_OUT), 0, 1);
-    const pe = reduced ? (opened ? 1 : 0) : smootherstep(pf.progress);
-    if (pe > 0) {
-      goal.lerp(zoneCentre.set(pf.x, LOOK_HEIGHT, pf.z), ZONE_PULL * pe);
-      if (wide) goal.x += PANEL_SHIFT * pe;
-      if (narrow) goal.z += SHEET_SHIFT * pe;
+    if (focusPoint) {
+      [pf.x, pf.z] = focusPoint;
+      pf.tour = !opened;
     }
-    const zoom = THREE.MathUtils.lerp(1, CAMERA.focusZoom, pe);
+    pf.progress = THREE.MathUtils.clamp(pf.progress + (focusPoint ? dt / PANEL_IN : -dt / PANEL_OUT), 0, 1);
+    const pe = reduced ? (focusPoint ? 1 : 0) : smootherstep(pf.progress);
+    if (pe > 0) {
+      goal.lerp(zoneCentre.set(pf.x, LOOK_HEIGHT, pf.z), (pf.tour ? TOUR_PULL : ZONE_PULL) * pe);
+      if (!pf.tour && wide) goal.x += PANEL_SHIFT * pe;
+      if (!pf.tour && narrow) goal.z += SHEET_SHIFT * pe;
+    }
+    const zoom = THREE.MathUtils.lerp(1, pf.tour ? TOUR_ZOOM : CAMERA.focusZoom, pe);
 
     if (!focus.current || runtime.camera.snap) {
       // First frame and fast travel: cut straight to the player.
