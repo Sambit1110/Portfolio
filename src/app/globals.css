@@ -82,6 +82,23 @@ canvas {
 .panel-stagger > :nth-child(4) { animation-delay: 220ms; }
 .panel-stagger > :nth-child(n + 5) { animation-delay: 250ms; }
 
+/* A newly discovered zone's dot swells, rings outward and settles lit. Ends on
+   the lit dot's own scale and glow, so nothing jumps when it finishes. */
+@keyframes discover-glow {
+  0% {
+    scale: 0.6;
+    box-shadow: 0 0 0 0 rgba(93, 224, 230, 0.9);
+  }
+  45% {
+    scale: 1.7;
+    box-shadow: 0 0 0 7px rgba(93, 224, 230, 0.2);
+  }
+  100% {
+    scale: 1.1;
+    box-shadow: 0 0 10px rgba(93, 224, 230, 0.9);
+  }
+}
+
 /* Touch: no double-tap zoom, text selection or long-press callouts on game
    controls. Pinch zoom stays available; page scrolling is untouched. */
 html {

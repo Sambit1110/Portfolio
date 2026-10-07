@@ -2,6 +2,7 @@
 
 import { useInteractionKeys } from "@/hooks/useInteractionKeys";
 import { useDeviceDetection } from "@/hooks/useDeviceDetection";
+import { useDiscoveryPersistence } from "@/hooks/useDiscoveryPersistence";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { CAMERA } from "@/config/world";
 import { useDeviceStore } from "@/stores/deviceStore";
@@ -9,7 +10,7 @@ import { useWorldStore } from "@/stores/worldStore";
 import { InteractionPrompt } from "./InteractionPrompt";
 import { Menu } from "./Menu";
 import { SoundToggle } from "./SoundToggle";
-import { VisitedZones } from "./VisitedZones";
+import { DiscoveryToast, VisitedZones } from "./VisitedZones";
 import { ContentPanel } from "./panels/ContentPanel";
 import { InteractButton } from "./touch/InteractButton";
 import { Joystick } from "./touch/Joystick";
@@ -48,6 +49,7 @@ export function Hud() {
   useInteractionKeys();
   useDeviceDetection();
   useKeyboardInset();
+  useDiscoveryPersistence();
   const hidden = useWorldStore((s) => s.pageView || !s.worldAvailable);
   const ready = useWorldStore((s) => s.worldReady);
   const busy = useWorldStore((s) => s.active !== null || s.menuOpen);
@@ -89,6 +91,7 @@ export function Hud() {
         </div>
         {touch ? <InteractButton /> : <InteractionPrompt />}
         <ViewWorldHint touch={touch} />
+        <DiscoveryToast />
       </div>
       <div className="pointer-events-auto">
         <ContentPanel />

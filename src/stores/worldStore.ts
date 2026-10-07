@@ -9,6 +9,9 @@ export const TRAVEL_VEIL_MS = 220;
 // can't lift the veil before its own jump.
 let travelTimers: ReturnType<typeof setTimeout>[] = [];
 
+// A zone opened for the first time, and how many zones that makes.
+export type Discovery = { zone: ZoneId; count: number };
+
 type WorldState = {
   // Target (zone, project pedestal, crystal, milestone…) the player can open now.
   nearby: Target | null;
@@ -16,6 +19,9 @@ type WorldState = {
   active: Target | null;
   // Zones whose content has been opened at least once.
   visited: ZoneId[];
+  // The latest first-time discovery, for the HUD's brief announcement. Zones
+  // restored from an earlier visit don't count as discoveries.
+  discovery: Discovery | null;
   menuOpen: boolean;
   // Full HTML view of the portfolio (also the no-WebGL fallback).
   pageView: boolean;
@@ -32,6 +38,7 @@ type WorldState = {
 
   setNearby: (target: Target | null) => void;
   open: (target: Target) => void;
+  restoreVisited: (zones: ZoneId[]) => void;
   close: () => void;
   setMenuOpen: (open: boolean) => void;
   setPageView: (open: boolean) => void;
@@ -47,6 +54,7 @@ export const useWorldStore = create<WorldState>((set) => ({
   nearby: null,
   active: null,
   visited: [],
+  discovery: null,
   menuOpen: false,
   pageView: false,
   worldAvailable: true,
@@ -60,12 +68,11 @@ export const useWorldStore = create<WorldState>((set) => ({
   open: (target) =>
     set((s) => {
       const zone = zoneOf(target);
-      return {
-        active: target,
-        menuOpen: false,
-        visited: zone && !s.visited.includes(zone) ? [...s.visited, zone] : s.visited,
-      };
+      if (!zone || s.visited.includes(zone)) return { active: target, menuOpen: false };
+      const visited = [...s.visited, zone];
+      return { active: target, menuOpen: false, visited, discovery: { zone, count: visited.length } };
     }),
+  restoreVisited: (zones) => set((s) => ({ visited: [...new Set([...s.visited, ...zones])] })),
   close: () => set({ active: null }),
   setMenuOpen: (menuOpen) => set({ menuOpen }),
   setPageView: (pageView) => set({ pageView, menuOpen: false, active: null }),
