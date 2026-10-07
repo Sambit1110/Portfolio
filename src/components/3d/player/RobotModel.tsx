@@ -4,8 +4,30 @@ import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import { PALETTE, PLAYER, TONES } from "@/config/world";
 import { Halo } from "../Effects";
-import { glow, matte } from "../materials";
+import { createGlow, glow, matte, singleton } from "../materials";
 import { runtime } from "@/stores/runtime";
+
+// Painted, gently glossy shell with a warm rim of light around its silhouette,
+// so the explorer reads as a finished character and separates from the sand.
+function createShell(color: string, roughness: number) {
+  const material = new THREE.MeshStandardMaterial({ color, roughness });
+  material.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <emissivemap_fragment>",
+      `#include <emissivemap_fragment>
+      float rim = pow( 1.0 - saturate( dot( normal, normalize( vViewPosition ) ) ), 3.0 );
+      totalEmissiveRadiance += vec3( 1.0, 0.86, 0.66 ) * rim * 0.32;`,
+    );
+  };
+  material.customProgramCacheKey = () => "robot-shell";
+  return material;
+}
+const creamShell = singleton(() => createShell(PALETTE.text, 0.48));
+const coralShell = singleton(() => createShell(PALETTE.coral, 0.6));
+// A glossy dark visor with the faintest cyan cast, behind bright eyes.
+const visor = singleton(() => new THREE.MeshStandardMaterial({ color: TONES.ink, roughness: 0.18, emissive: PALETTE.cyan, emissiveIntensity: 0.05 }));
+const eyeGlow = singleton(() => createGlow(PALETTE.cyan, 2.6));
+const catchlight = singleton(() => new THREE.MeshBasicMaterial({ color: "#ffffff", toneMapped: false }));
 
 export type RobotMotion = {
   vx: number;
@@ -158,25 +180,25 @@ export function RobotModel({ motion }: { motion: RefObject<RobotMotion> }) {
         [rightFoot, 0.19],
       ].map(([ref, x]) => (
         <group key={x as number} ref={ref as RefObject<THREE.Group>} position-x={x as number}>
-          <RoundedBox args={[0.24, 0.16, 0.34]} radius={0.06} smoothness={2} position={[0, 0.08, 0.03]} castShadow material={matte(PALETTE.coral)} />
+          <RoundedBox args={[0.24, 0.16, 0.34]} radius={0.06} smoothness={2} position={[0, 0.08, 0.03]} castShadow material={coralShell()} />
         </group>
       ))}
 
       <group ref={body}>
         {/* Torso */}
-        <mesh position={[0, 0.55, 0]} scale={[1, 0.92, 0.9]} castShadow material={matte(PALETTE.text)}>
-          <sphereGeometry args={[0.42, 10, 8]} />
+        <mesh position={[0, 0.55, 0]} scale={[1, 0.92, 0.9]} castShadow material={creamShell()}>
+          <sphereGeometry args={[0.42, 16, 12]} />
         </mesh>
         {/* Chest plate with a small lantern-gold light */}
-        <RoundedBox args={[0.42, 0.3, 0.12]} radius={0.05} smoothness={2} position={[0, 0.56, 0.34]} material={matte(PALETTE.coral)} />
+        <RoundedBox args={[0.42, 0.3, 0.12]} radius={0.05} smoothness={2} position={[0, 0.56, 0.34]} material={coralShell()} />
         <mesh position={[0, 0.58, 0.41]} material={glow(PALETTE.lantern, 1.2)}>
           <circleGeometry args={[0.055, 8]} />
         </mesh>
         {/* Arms */}
-        <mesh ref={leftArm} position={[-0.44, 0.58, 0]} castShadow material={matte(PALETTE.coral)}>
+        <mesh ref={leftArm} position={[-0.44, 0.58, 0]} castShadow material={coralShell()}>
           <capsuleGeometry args={[0.08, 0.2, 2, 6]} />
         </mesh>
-        <mesh ref={rightArm} position={[0.44, 0.58, 0]} castShadow material={matte(PALETTE.coral)}>
+        <mesh ref={rightArm} position={[0.44, 0.58, 0]} castShadow material={coralShell()}>
           <capsuleGeometry args={[0.08, 0.2, 2, 6]} />
         </mesh>
         {/* Neck */}
@@ -185,22 +207,28 @@ export function RobotModel({ motion }: { motion: RefObject<RobotMotion> }) {
         </mesh>
 
         <group ref={head} position={[0, 1.28, 0]}>
-          <RoundedBox args={[0.96, 0.7, 0.78]} radius={0.2} smoothness={3} castShadow material={matte(PALETTE.text)} />
+          <RoundedBox args={[0.96, 0.7, 0.78]} radius={0.2} smoothness={3} castShadow material={creamShell()} />
           {/* Coral cap: the shape you recognise from above. */}
-          <RoundedBox args={[0.7, 0.1, 0.56]} radius={0.04} smoothness={2} position={[0, 0.36, -0.02]} castShadow material={matte(PALETTE.coral)} />
+          <RoundedBox args={[0.7, 0.1, 0.56]} radius={0.04} smoothness={2} position={[0, 0.36, -0.02]} castShadow material={coralShell()} />
           {/* Ear bolts */}
           {[-0.5, 0.5].map((x) => (
-            <mesh key={x} position={[x, 0, 0]} rotation-z={Math.PI / 2} material={matte(PALETTE.coral)}>
+            <mesh key={x} position={[x, 0, 0]} rotation-z={Math.PI / 2} material={coralShell()}>
               <cylinderGeometry args={[0.1, 0.1, 0.08, 8]} />
             </mesh>
           ))}
           {/* Face display */}
-          <RoundedBox args={[0.74, 0.46, 0.06]} radius={0.05} smoothness={2} position={[0, -0.02, 0.38]} material={matte(TONES.ink)} />
+          <RoundedBox args={[0.74, 0.46, 0.06]} radius={0.05} smoothness={2} position={[0, -0.02, 0.38]} material={visor()} />
           <group ref={eyes} position={[0, 0.01, 0.42]}>
             {[-0.16, 0.16].map((x) => (
-              <mesh key={x} position={[x, 0, 0]} material={glow(PALETTE.cyan, 1.8)}>
-                <capsuleGeometry args={[0.05, 0.09, 2, 6]} />
-              </mesh>
+              <group key={x} position={[x, 0, 0]}>
+                <mesh material={eyeGlow()}>
+                  <capsuleGeometry args={[0.05, 0.09, 2, 8]} />
+                </mesh>
+                {/* A tiny catchlight brings the eyes to life. */}
+                <mesh position={[-0.018, 0.045, 0.045]} material={catchlight()}>
+                  <sphereGeometry args={[0.016, 6, 4]} />
+                </mesh>
+              </group>
             ))}
           </group>
 
@@ -208,6 +236,10 @@ export function RobotModel({ motion }: { motion: RefObject<RobotMotion> }) {
           <group ref={antenna} position={[0.16, 0.38, -0.08]}>
             <mesh position={[0, 0.2, 0]} material={matte(TONES.trunk)}>
               <cylinderGeometry args={[0.022, 0.03, 0.4, 5]} />
+            </mesh>
+            {/* A collar seats the lantern on its stalk. */}
+            <mesh position={[0, 0.37, 0]} material={matte(TONES.ink)}>
+              <cylinderGeometry args={[0.055, 0.04, 0.05, 8]} />
             </mesh>
             <mesh position={[0, 0.44, 0]} material={glow(PALETTE.lantern, 2)}>
               <icosahedronGeometry args={[0.09, 1]} />

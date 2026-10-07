@@ -8,6 +8,7 @@ import { useReducedMotionSync } from "@/hooks/useReducedMotionSync";
 import { QUALITY_SETTINGS, stepQuality } from "@/config/quality";
 import { useDeviceStore } from "@/stores/deviceStore";
 import { useWorldStore } from "@/stores/worldStore";
+import { PostEffects } from "./PostEffects";
 import { World } from "./World";
 
 // Quality steps down below 45 fps and back up at 58+, so a steady 60 Hz phone
@@ -117,6 +118,7 @@ export default function Experience() {
         {touch && monitoring && !covered && (
           <PerformanceMonitor bounds={FPS_BOUNDS} onDecline={() => step(-1)} onIncline={() => step(1)} />
         )}
+        {QUALITY_SETTINGS[quality].bloom && <PostEffects />}
         {/* Rapier's WASM and the ground fonts load asynchronously. */}
         <Suspense fallback={null}>
           <World />

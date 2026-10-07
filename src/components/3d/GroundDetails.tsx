@@ -4,9 +4,11 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { PALETTE, TONES } from "@/config/world";
 import { createRandom } from "@/lib/random";
 import { LAYOUT, chunkByArea, type ScatterPlacement, type TintedPlacement } from "@/lib/layout";
+import { distanceToPath } from "@/lib/paths";
 import { InstancedPart, composeMatrix } from "./InstancedPart";
-import { foliageColors } from "./foliage";
-import { instancedMatte } from "./materials";
+import { foliageColors, hash2 } from "./foliage";
+import { instancedMatte, singleton } from "./materials";
+import { buildProp, propMaterial } from "./props/build";
 import { wind } from "./wind";
 import { QUALITY_SETTINGS } from "@/config/quality";
 import { useDeviceStore } from "@/stores/deviceStore";
@@ -74,6 +76,61 @@ const getShared = () =>
     pebble: new THREE.DodecahedronGeometry(1, 0),
   });
 
+// A fallen leaf: a small, slightly cupped diamond lying on the ground.
+const leafGeometry = singleton(() => {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute([0, 0.02, -0.16, 0.08, 0, 0, 0, 0.02, 0.16, 0, 0.02, -0.16, 0, 0.02, 0.16, -0.08, 0, 0], 3));
+  g.computeVertexNormals();
+  return g;
+});
+const leafMaterial = singleton(() => new THREE.MeshStandardMaterial({ flatShading: true, roughness: 1, side: THREE.DoubleSide }));
+
+// A small woodland mushroom (never cyan: cyan means interactive).
+const mushroomGeometry = singleton(() =>
+  buildProp([
+    { geometry: new THREE.CylinderGeometry(0.035, 0.05, 0.2, 5), color: PALETTE.text, position: [0, 0.1, 0] },
+    { geometry: new THREE.SphereGeometry(0.12, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2), color: PALETTE.coral, position: [0, 0.18, 0], shade: 0.7 },
+  ]),
+);
+
+const LEAF_TONES = [PALETTE.amber, PALETTE.coral, TONES.wood, "#9C8A4E"];
+
+// Leaves scattered under the trees and bushes, a few mushrooms at their feet:
+// small storytelling that makes the groves feel lived in. Positions come from
+// a hash of each plant's position, so they never move between visits.
+function createUndergrowth() {
+  const leaves: THREE.Matrix4[] = [];
+  const leafColors: THREE.Color[] = [];
+  const mushrooms: THREE.Matrix4[] = [];
+  const plants = [
+    ...LAYOUT.trees.map((t) => ({ x: t.position[0], z: t.position[2], r: 1.9 * t.scale, n: 9 })),
+    ...LAYOUT.bushes.map((b) => ({ x: b.position[0], z: b.position[2], r: 1.2 * b.scale[0], n: 3 })),
+  ];
+  for (const { x, z, r, n } of plants) {
+    for (let i = 0; i < n; i++) {
+      const a = hash2(x, z, i * 3 + 1) * Math.PI * 2;
+      const d = (0.35 + hash2(x, z, i * 3 + 2) * 0.75) * r;
+      const lx = x + Math.cos(a) * d;
+      const lz = z + Math.sin(a) * d;
+      if (distanceToPath(lx, lz) < 0.2) continue;
+      leaves.push(composeMatrix([lx, 0.015, lz], [0, a * 3, 0], 0.8 + hash2(lx, lz, 9) * 0.6));
+      leafColors.push(new THREE.Color(LEAF_TONES[Math.floor(hash2(lx, lz, 4) * LEAF_TONES.length)]).offsetHSL(0, 0, (hash2(lx, lz, 6) - 0.5) * 0.1));
+    }
+    if (n > 3 && hash2(x, z, 77) < 0.3) {
+      const a = hash2(x, z, 78) * Math.PI * 2;
+      for (let k = 0; k < 2 + Math.floor(hash2(x, z, 79) * 2); k++) {
+        const mx = x + Math.cos(a + k * 0.5) * r * 0.75;
+        const mz = z + Math.sin(a + k * 0.5) * r * 0.75;
+        mushrooms.push(composeMatrix([mx, 0, mz], [0, k, 0], 0.7 + k * 0.25));
+      }
+    }
+  }
+  return { leaves, leafColors, mushrooms };
+}
+
+// Computed once: the layout never changes.
+const undergrowth = singleton(createUndergrowth);
+
 function toMatrices(items: ScatterPlacement[]) {
   return items.map((p) => composeMatrix(p.position, [0, p.rotationY, 0], p.scale));
 }
@@ -120,6 +177,7 @@ export function GroundDetails() {
   }, [grassStride]);
 
   const { stalk, bloom, pebble } = getShared();
+  const { leaves, leafColors, mushrooms } = undergrowth();
 
   return (
     <group>
@@ -135,6 +193,8 @@ export function GroundDetails() {
         colors={data.pebbleColors}
         receiveShadow
       />
+      <InstancedPart geometry={leafGeometry()} material={leafMaterial()} transforms={leaves} colors={leafColors} receiveShadow />
+      <InstancedPart geometry={mushroomGeometry()} material={propMaterial()} transforms={mushrooms} castShadow receiveShadow />
     </group>
   );
 }

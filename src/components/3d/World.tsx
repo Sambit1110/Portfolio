@@ -14,6 +14,7 @@ import { Lights } from "./Lights";
 import { InteractionTracker } from "./interaction/InteractionTracker";
 import { DustTrail } from "./player/DustTrail";
 import { Player } from "./player/Player";
+import { Sparkles } from "./Sparkles";
 import { WindDriver } from "./WindDriver";
 
 
@@ -44,6 +45,7 @@ export function World() {
       </Physics>
       <DustTrail />
       <Atmosphere />
+      <Sparkles />
       <WindDriver />
       <ReadySignal />
       <AudioDriver />

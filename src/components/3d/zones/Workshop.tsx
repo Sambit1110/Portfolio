@@ -14,7 +14,7 @@ import { TargetLabel } from "../interaction/TargetLabel";
 import { useTargetGlow } from "../interaction/useTargetGlow";
 import { ZoneLabel } from "./ZoneLabel";
 
-const SHED: [number, number] = [0, -28.5];
+export const SHED: [number, number] = [0, -28.5];
 const SHED_SIZE = { w: 5, h: 2.6, d: 4 };
 const MAST_HEIGHT = 9;
 const SCREEN = { w: 1.2, h: 0.8, y: 2.2 };

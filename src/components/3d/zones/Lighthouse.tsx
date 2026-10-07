@@ -10,7 +10,7 @@ import { Halo } from "../Effects";
 import { createAdditive, createGlow, glow, halo, matte, singleton } from "../materials";
 import { ZoneLabel } from "./ZoneLabel";
 
-const TOWER: [number, number] = [6.8, 33.4];
+export const TOWER: [number, number] = [6.8, 33.4];
 const BANDS = 6;
 const BAND_HEIGHT = 1.35;
 // Long enough to sweep across the plaza ~29 units away.
@@ -20,6 +20,12 @@ const MAILBOX: [number, number] = [MX + 1, MZ - 0.4];
 
 const beamMaterial = singleton(() => {
   const m = createAdditive(PALETTE.lantern, 0.16, getBeamTexture());
+  m.side = THREE.DoubleSide;
+  return m;
+});
+// The lamp's second, fainter beam on the far side.
+const backBeamMaterial = singleton(() => {
+  const m = createAdditive(PALETTE.lantern, 0.07, getBeamTexture());
   m.side = THREE.DoubleSide;
   return m;
 });
@@ -88,6 +94,9 @@ export function Lighthouse() {
         <group ref={beam} position={[0, top + 0.6, 0]}>
           <mesh position={[BEAM_LENGTH / 2, 0, 0]} rotation-z={Math.PI / 2} material={beamMaterial()}>
             <coneGeometry args={[4.5, BEAM_LENGTH, 20, 1, true]} />
+          </mesh>
+          <mesh position={[-BEAM_LENGTH * 0.35, 0, 0]} rotation-z={-Math.PI / 2} material={backBeamMaterial()}>
+            <coneGeometry args={[3.2, BEAM_LENGTH * 0.7, 16, 1, true]} />
           </mesh>
         </group>
       </group>

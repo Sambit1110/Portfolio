@@ -6,10 +6,13 @@ import { PALETTE } from "@/config/world";
 import { ZONE_BY_ID } from "@/content/zones";
 import { runtime } from "@/stores/runtime";
 import type { ScatterPlacement } from "@/lib/layout";
+import { getGlowTexture } from "@/lib/textures";
 import { SKILL_NODES, type SkillNode } from "@/lib/placements";
 import { Halo, LightPillar } from "../Effects";
+import { InstancedPart, composeMatrix } from "../InstancedPart";
 import { Monoliths } from "../Monoliths";
-import { matte, singleton } from "../materials";
+import { hash2 } from "../foliage";
+import { createGlow, glow, matte, singleton } from "../materials";
 import { TargetLabel } from "../interaction/TargetLabel";
 import { useTargetGlow } from "../interaction/useTargetGlow";
 import { ZoneLabel } from "./ZoneLabel";
@@ -26,7 +29,7 @@ const CLUSTER: [number, number, number, number, number][] = [
 ];
 
 // Standing stones around the garden, leaving the east side open for the path.
-const STONES: ScatterPlacement[] = Array.from({ length: 5 }, (_, i) => {
+export const STONES: ScatterPlacement[] = Array.from({ length: 5 }, (_, i) => {
   const a = 1.05 * (i + 1);
   return {
     position: [X + Math.cos(a) * 7.8, 0, Z + Math.sin(a) * 7.8],
@@ -35,16 +38,33 @@ const STONES: ScatterPlacement[] = Array.from({ length: 5 }, (_, i) => {
   };
 });
 
-// Faceted, semi-glossy cyan that glows brighter as the player approaches.
+// Faceted, glossy and translucent: a shell of cyan glass around a bright heart.
 const crystalMaterial = singleton(
   () =>
     new THREE.MeshStandardMaterial({
       color: PALETTE.cyan,
       emissive: PALETTE.cyan,
       emissiveIntensity: 0.4,
-      roughness: 0.25,
+      roughness: 0.12,
+      metalness: 0.1,
       flatShading: true,
+      transparent: true,
+      opacity: 0.72,
     }),
+);
+// The glowing hearts of the central cluster.
+const heartMaterial = singleton(() => createGlow(PALETTE.cyan, 2.2));
+
+// Small shards growing at the feet of the standing stones, inside the ground
+// the stones' colliders already keep the robot out of.
+const SHARDS = STONES.flatMap((stone, s) =>
+  [0, 1, 2].map((k) => {
+    const a = s * 1.7 + k * 2.1 + hash2(s, k) * 0.6;
+    const r = 0.62 + hash2(s, k + 5) * 0.2;
+    const h = 0.32 + hash2(s, k + 9) * 0.4;
+    const [x, , z] = stone.position;
+    return composeMatrix([x + Math.cos(a) * r, 0, z + Math.sin(a) * r], [hash2(s, k + 13) * 0.6 - 0.3, a, hash2(s, k + 17) * 0.6 - 0.3], [h * 0.6, h, h * 0.6]);
+  }),
 );
 
 // Elongated octahedron, base at y = 0, unit height.
@@ -61,13 +81,15 @@ const crystalHeight = (node: SkillNode) => 0.55 + node.category.skills.length * 
 
 function SkillCrystal({ node }: { node: SkillNode }) {
   const glowLevel = useTargetGlow({ kind: "skill", id: node.category.id });
-  const crystal = useRef<THREE.Mesh>(null);
+  const crystal = useRef<THREE.Group>(null);
   const material = useRef<THREE.MeshStandardMaterial>(null);
+  const heart = useRef<THREE.MeshStandardMaterial>(null);
   const height = crystalHeight(node);
 
   useFrame(({ clock }, delta) => {
     const g = glowLevel.current;
     if (material.current) material.current.emissiveIntensity = 0.35 + runtime.zoneGlow.skills * 0.3 + g * 1.4;
+    if (heart.current) heart.current.emissiveIntensity = 1.2 + runtime.zoneGlow.skills * 0.6 + g * 2.2;
     if (crystal.current) {
       crystal.current.position.y = 0.45 + Math.sin(clock.elapsedTime * 1.2 + node.angle) * 0.05 + g * 0.15;
       // Spins while near; accumulated, so the spin eases in and out smoothly.
@@ -78,16 +100,24 @@ function SkillCrystal({ node }: { node: SkillNode }) {
   return (
     <group position={[node.position[0], 0, node.position[1]]}>
       <mesh geometry={plinthGeometry()} position-y={0.22} rotation-y={node.angle} material={matte(PALETTE.rock)} castShadow receiveShadow />
-      <mesh ref={crystal} geometry={crystalGeometry()} rotation-y={node.angle} scale={[0.9, height, 0.9]} castShadow>
-        <meshStandardMaterial
-          ref={material}
-          color={PALETTE.cyan}
-          emissive={PALETTE.cyan}
-          emissiveIntensity={0.35}
-          roughness={0.25}
-          flatShading
-        />
-      </mesh>
+      <group ref={crystal} rotation-y={node.angle}>
+        <mesh geometry={crystalGeometry()} scale={[0.9, height, 0.9]} castShadow>
+          <meshStandardMaterial
+            ref={material}
+            color={PALETTE.cyan}
+            emissive={PALETTE.cyan}
+            emissiveIntensity={0.35}
+            roughness={0.12}
+            metalness={0.1}
+            flatShading
+            transparent
+            opacity={0.72}
+          />
+        </mesh>
+        <mesh geometry={crystalGeometry()} position-y={height * 0.12} scale={[0.4, height * 0.62, 0.4]}>
+          <meshStandardMaterial ref={heart} color={PALETTE.cyan} emissive={PALETTE.cyan} emissiveIntensity={1.2} flatShading />
+        </mesh>
+      </group>
       <TargetLabel text={node.category.name} position={[0, height + 0.9, 0]} glow={glowLevel} size={0.38} />
     </group>
   );
@@ -133,10 +163,26 @@ export function CrystalGarden() {
               castShadow
             />
           ))}
+          {CLUSTER.slice(0, 2).map(([x, z, h, tx, tz], i) => (
+            <mesh
+              key={`heart-${i}`}
+              geometry={crystalGeometry()}
+              material={heartMaterial()}
+              position={[x, h * 0.1, z]}
+              rotation={[tx, i * 0.7, tz]}
+              scale={[h * 0.22, h * 0.7, h * 0.22]}
+            />
+          ))}
         </group>
         <Halo color={PALETTE.cyan} size={6} position={[0, 3, 0]} opacity={0.3} additive={false} />
-        <LightPillar color={PALETTE.cyan} radius={1.3} height={12} materialRef={pillar} />
+        <LightPillar color={PALETTE.cyan} radius={1.25} radiusTop={0.35} height={12} materialRef={pillar} />
+        {/* Cyan light pooled on the garden floor */}
+        <mesh position={[0, 0.02, 0]} rotation-x={-Math.PI / 2} renderOrder={1}>
+          <planeGeometry args={[9, 9]} />
+          <meshBasicMaterial color={PALETTE.cyan} map={getGlowTexture()} transparent opacity={0.2} depthWrite={false} toneMapped={false} />
+        </mesh>
       </group>
+      <InstancedPart geometry={crystalGeometry()} material={glow(PALETTE.cyan, 0.9)} transforms={SHARDS} castShadow />
 
       {/* One crystal node per category in content/skills.ts. */}
       {SKILL_NODES.map((node) => (

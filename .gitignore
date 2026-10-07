@@ -46,3 +46,6 @@ next-env.d.ts
 .impeccable/
 CLAUDE.md
 AGENTS.md
+
+# Local Playwright CLI artifacts
+.playwright-cli/

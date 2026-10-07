@@ -19,6 +19,8 @@ export function Halo({ color, size, position = [0, 0, 0], opacity = 0.6, additiv
 type LightPillarProps = {
   color: string;
   radius: number;
+  // Narrower top makes the pillar read as a beam of light rather than a slab.
+  radiusTop?: number;
   height: number;
   position?: [number, number, number];
   opacity?: number;
@@ -28,10 +30,10 @@ type LightPillarProps = {
 
 // Open cylinder, bright at its base and fading upward. Normal blending keeps
 // cyan reading as cyan against the bright ground.
-export function LightPillar({ color, radius, height, position = [0, 0, 0], opacity = 0.3, materialRef }: LightPillarProps) {
+export function LightPillar({ color, radius, radiusTop = radius, height, position = [0, 0, 0], opacity = 0.3, materialRef }: LightPillarProps) {
   return (
     <mesh position={[position[0], position[1] + height / 2, position[2]]}>
-      <cylinderGeometry args={[radius, radius, height, 20, 1, true]} />
+      <cylinderGeometry args={[radiusTop, radius, height, 20, 1, true]} />
       <meshBasicMaterial
         ref={materialRef}
         color={color}

@@ -7,7 +7,7 @@ import { AICore } from "./AICore";
 const LANTERN_RADIUS = PLAZA_RADIUS + 0.9;
 // Exits (east, south, west, north); a lantern stands either side of each.
 const EXIT_ANGLES = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
-const LANTERNS = EXIT_ANGLES.flatMap((a) =>
+export const LANTERNS = EXIT_ANGLES.flatMap((a) =>
   [-0.3, 0.3].map((o) => [Math.cos(a + o) * LANTERN_RADIUS, Math.sin(a + o) * LANTERN_RADIUS] as [number, number]),
 );
 

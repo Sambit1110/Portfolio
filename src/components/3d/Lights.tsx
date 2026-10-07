@@ -17,7 +17,7 @@ const focus = new THREE.Vector3();
 
 export function Lights() {
   const sun = useRef<THREE.DirectionalLight>(null);
-  const shadowMap = QUALITY_SETTINGS[useDeviceStore((s) => s.quality)].shadowMap;
+  const { shadowMap, shadowSoftness } = QUALITY_SETTINGS[useDeviceStore((s) => s.quality)];
 
   // Resize the shadow map when the quality tier changes (shadows stay on).
   useEffect(() => {
@@ -62,13 +62,17 @@ export function Lights() {
       <fog attach="fog" args={["#E9CBA5", 50, 105]} />
       {/* Lavender sky fill: whatever the sun doesn't reach turns softly violet.
           Sun + fill are balanced so sunlit ground renders at its palette colour. */}
-      <hemisphereLight args={["#CEC6F0", PALETTE.ground, 2.3]} />
+      <hemisphereLight args={["#CBC2EE", PALETTE.ground, 2.15]} />
+      {/* Warm late sun. Soft-edged shadows (PCF over a rotated sample disc),
+          a touch lighter than black so shaded ground keeps its lavender. */}
       <directionalLight
         ref={sun}
-        color="#FFF4B8"
-        intensity={2.9}
+        color="#FFEDB5"
+        intensity={3.05}
         castShadow
         shadow-mapSize={[2048, 2048]}
+        shadow-radius={shadowSoftness}
+        shadow-intensity={0.88}
         shadow-bias={-0.0004}
         shadow-normalBias={0.04}
         shadow-camera-left={-SHADOW_EXTENT}
@@ -78,6 +82,9 @@ export function Lights() {
         shadow-camera-near={1}
         shadow-camera-far={80}
       />
+      {/* Faint peach bounce from the camera's side: faces turned toward the
+          viewer keep their form and the robot separates from the ground. */}
+      <directionalLight color="#FFC2A0" intensity={0.45} position={[14, 10, 22]} />
     </>
   );
 }

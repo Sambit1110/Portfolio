@@ -46,8 +46,6 @@ export const getFadeTexture = cached(() => verticalFade(true));
 // Bright at the top (a cone's tip), fading toward the base: light beams.
 export const getBeamTexture = cached(() => verticalFade(false));
 
-const GROUND_PIXELS = 1024;
-
 // Parsed by hand: THREE.Color would convert to linear space, and the canvas
 // expects plain sRGB, so painted colours would come out too dark.
 function hexToRgba(hex: string, alpha: number) {
@@ -56,10 +54,11 @@ function hexToRgba(hex: string, alpha: number) {
 }
 
 // Hand-painted look for the whole world in one modest texture: soft patches,
-// meadow tint under the grass, worn paths and the plaza paving.
-export function paintGroundTexture() {
+// meadow tint under the grass, worn paths and the plaza paving. `pixels` is the
+// texture's size (1024 on phones, 2048 on desktop for crisper edges).
+export function paintGroundTexture(pixels = 1024) {
   const half = WORLD.groundHalf;
-  const scale = GROUND_PIXELS / (half * 2);
+  const scale = pixels / (half * 2);
   const px = (x: number) => (x + half) * scale;
   const pz = (z: number) => (z + half) * scale;
   const rng = createRandom(WORLD.seed + 7);
@@ -74,9 +73,9 @@ export function paintGroundTexture() {
     ctx.fill();
   };
 
-  const texture = canvasTexture(GROUND_PIXELS, GROUND_PIXELS, (ctx) => {
+  const texture = canvasTexture(pixels, pixels, (ctx) => {
     ctx.fillStyle = PALETTE.ground;
-    ctx.fillRect(0, 0, GROUND_PIXELS, GROUND_PIXELS);
+    ctx.fillRect(0, 0, pixels, pixels);
 
     // Large organic patches, darker and lighter.
     for (let i = 0; i < 70; i++) {
@@ -86,9 +85,13 @@ export function paintGroundTexture() {
       blob(ctx, x, z, rng.range(4, 13), dark ? PALETTE.path : TONES.groundLight, dark ? 0.35 : 0.45);
     }
 
-    // Faint green wash under every grass tuft so meadows read from far away.
+    // Green-gold wash under every grass tuft, so meadows read as meadows from
+    // far away and the sand between them as worn ground.
     for (const g of LAYOUT.grass) {
-      blob(ctx, g.position[0], g.position[2], 1.3, PALETTE.foliageLight, 0.035);
+      blob(ctx, g.position[0], g.position[2], 2, PALETTE.foliageLight, 0.065);
+    }
+    for (const f of LAYOUT.flowers) {
+      blob(ctx, f.position[0], f.position[2], 2.2, PALETTE.amber, 0.05);
     }
 
     // Shore: lighter sand along the south edge.
@@ -96,16 +99,21 @@ export function paintGroundTexture() {
     shore.addColorStop(0, hexToRgba(TONES.groundLight, 0));
     shore.addColorStop(1, hexToRgba(TONES.foam, 0.8));
     ctx.fillStyle = shore;
-    ctx.fillRect(0, pz(WORLD.boundary - 2), GROUND_PIXELS, GROUND_PIXELS);
+    ctx.fillRect(0, pz(WORLD.boundary - 2), pixels, pixels);
 
     // Worn ground at each landmark.
     for (const c of CLEARINGS.slice(1)) blob(ctx, c.x, c.z, c.r * 0.8, PALETTE.path, 0.55);
 
-    // Paths: a soft wide underlay, then the core, then scuffs along it.
+    // Paths: a soft wide underlay, a darker trodden edge, then the core and
+    // scuffs along it.
     ctx.lineCap = "round";
-    for (const [width, alpha] of [[1.5, 0.35], [1, 0.9]] as const) {
+    for (const [width, alpha, colour] of [
+      [1.5, 0.35, PALETTE.path],
+      [1.12, 0.45, TONES.pathDark],
+      [1, 0.92, PALETTE.path],
+    ] as const) {
       for (const c of PATHS) {
-        ctx.strokeStyle = hexToRgba(PALETTE.path, alpha);
+        ctx.strokeStyle = hexToRgba(colour, alpha);
         ctx.lineWidth = c.width * width * scale;
         ctx.beginPath();
         ctx.moveTo(px(c.from[0]), pz(c.from[1]));
@@ -127,6 +135,25 @@ export function paintGroundTexture() {
     ctx.beginPath();
     ctx.arc(px(0), pz(0), PLAZA_RADIUS * scale, 0, Math.PI * 2);
     ctx.fill();
+    // Paving: rings of laid stones, each ring offset from the last, with a
+    // lighter centre where the AI Core stands.
+    for (let ring = 0; ring < 5; ring++) {
+      const r0 = 1.6 + ring * 1.25;
+      const r1 = r0 + 1.05;
+      const stones = Math.round(((r0 + r1) / 2) * 3.4);
+      for (let i = 0; i < stones; i++) {
+        const a0 = ((i + (ring % 2) * 0.5) / stones) * Math.PI * 2 + 0.03;
+        const a1 = a0 + (Math.PI * 2) / stones - 0.06;
+        const shade = rng.next();
+        ctx.fillStyle = hexToRgba(shade < 0.5 ? TONES.pathDark : TONES.groundLight, 0.1 + rng.next() * 0.12);
+        ctx.beginPath();
+        ctx.arc(px(0), pz(0), (r1 - 0.06) * scale, a0, a1);
+        ctx.arc(px(0), pz(0), (r0 + 0.06) * scale, a1, a0, true);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    blob(ctx, 0, 0, 3.2, TONES.groundLight, 0.4);
     ctx.strokeStyle = hexToRgba(PALETTE.text, 0.55);
     for (const [r, w] of [[PLAZA_RADIUS - 0.6, 0.18], [PLAZA_RADIUS - 1.1, 0.08]]) {
       ctx.lineWidth = w * scale;

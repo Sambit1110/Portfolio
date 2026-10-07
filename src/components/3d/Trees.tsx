@@ -1,87 +1,79 @@
 import { useMemo } from "react";
 import * as THREE from "three";
 import { CylinderCollider, RigidBody } from "@react-three/rapier";
-import { TONES } from "@/config/world";
 import type { TreePlacement } from "@/lib/layout";
+import { terrainHeight } from "@/lib/terrain";
 import { InstancedPart, composeMatrix } from "./InstancedPart";
-import { foliageColors } from "./foliage";
-import { instancedMatte, singleton } from "./materials";
+import { foliageColors, hash2, pineTreeGeometry, roundTreeGeometry, tallTreeGeometry } from "./foliage";
+import { singleton } from "./materials";
 import { createFoliageMaterial } from "./wind";
 
-const foliageMaterial = singleton(createFoliageMaterial);
+// Broadleaf crowns sway freely; pines are stiffer and barely shimmer.
+const broadleafMaterial = singleton(() => createFoliageMaterial({ sway: 1, flutter: 1 }));
+const pineMaterial = singleton(() => createFoliageMaterial({ sway: 0.55, flutter: 0.35 }));
+
+type Species = "round" | "tall" | "pine";
+
+// One merged geometry per species, shared by every Trees chunk.
+const GEOMETRY: Record<Species, () => THREE.BufferGeometry> = {
+  round: singleton(roundTreeGeometry),
+  tall: singleton(tallTreeGeometry),
+  pine: singleton(pineTreeGeometry),
+};
+
+// Pines join the mix by position (the layout itself is unchanged): half of the
+// tall trees everywhere, and some of the rounded ones in the forest beyond the
+// walls, so the border gains a varied, pointed silhouette.
+function speciesOf(t: TreePlacement, border: boolean): Species {
+  const h = hash2(t.position[0], t.position[2]);
+  if (t.kind === "tall") return h < 0.5 ? "pine" : "tall";
+  return border && h < 0.3 ? "pine" : "round";
+}
 
 type TreesProps = {
   trees: TreePlacement[];
   colliders?: boolean;
 };
 
-type Part = {
-  geometry: THREE.BufferGeometry;
-  local: THREE.Matrix4;
-  // null = trunk colour; otherwise how much to lighten the foliage colour.
-  lighten: number | null;
-};
-
-// Geometries are created once and shared by every Trees chunk.
-let parts: Record<TreePlacement["kind"], Part[]> | null = null;
-function getParts() {
-  return (parts ??= {
-    // Wide, rounded canopy built from overlapping blobs.
-    round: [
-      { geometry: new THREE.CylinderGeometry(0.16, 0.24, 1.3, 6), local: composeMatrix([0, 0.65, 0]), lighten: null },
-      { geometry: new THREE.IcosahedronGeometry(1.05, 1), local: composeMatrix([0, 2, 0]), lighten: 0 },
-      { geometry: new THREE.IcosahedronGeometry(0.7, 0), local: composeMatrix([0.7, 1.7, 0.25], [0.3, 0.5, 0]), lighten: -0.03 },
-      { geometry: new THREE.IcosahedronGeometry(0.62, 0), local: composeMatrix([-0.55, 1.85, -0.4], [0.6, 0.2, 0]), lighten: -0.02 },
-      { geometry: new THREE.IcosahedronGeometry(0.55, 0), local: composeMatrix([0.1, 2.8, 0.1], [0.2, 0.9, 0]), lighten: 0.07 },
-    ],
-    // Taller, columnar tree of stacked blobs.
-    tall: [
-      { geometry: new THREE.CylinderGeometry(0.14, 0.2, 1.6, 6), local: composeMatrix([0, 0.8, 0]), lighten: null },
-      { geometry: new THREE.IcosahedronGeometry(0.85, 1), local: composeMatrix([0, 1.9, 0]), lighten: -0.02 },
-      { geometry: new THREE.IcosahedronGeometry(0.7, 1), local: composeMatrix([0, 2.8, 0], [0, 0.6, 0]), lighten: 0.02 },
-      { geometry: new THREE.IcosahedronGeometry(0.48, 0), local: composeMatrix([0, 3.55, 0], [0.4, 0, 0.3]), lighten: 0.08 },
-    ],
-  });
-}
-
 // Trunk colliders are widened to roughly match the lowest foliage.
 const COLLIDER_RADIUS = { round: 0.6, tall: 0.5 };
 
 export function Trees({ trees, colliders = false }: TreesProps) {
   const groups = useMemo(() => {
-    const trunk = new THREE.Color(TONES.trunk);
-    return (["round", "tall"] as const).map((kind) => {
-      const ofKind = trees.filter((t) => t.kind === kind);
-      const transforms = ofKind.map((t) => composeMatrix(t.position, [0, t.rotationY, 0], t.scale));
-      const tones = ofKind.map((t) => t.tone);
-      const seed = Math.round(Math.abs(ofKind[0]?.position[0] ?? 0) * 100) + ofKind.length;
+    return (["round", "tall", "pine"] as const).map((species) => {
+      const ofSpecies = trees.filter((t) => speciesOf(t, !colliders) === species);
+      const seed = Math.round(Math.abs(ofSpecies[0]?.position[0] ?? 0) * 100) + ofSpecies.length;
       return {
-        kind,
-        transforms,
-        parts: getParts()[kind].map((part) => ({
-          ...part,
-          colors: part.lighten === null ? ofKind.map(() => trunk) : foliageColors(tones, seed, part.lighten),
-        })),
+        species,
+        // Each tree gets its own height, slenderness and a slight lean.
+        transforms: ofSpecies.map((t) => {
+          const [x, , z] = t.position;
+          const stretch = 0.9 + hash2(x, z, 1) * 0.28;
+          const lean = (hash2(x, z, 2) - 0.5) * 0.08;
+          return composeMatrix([x, terrainHeight(x, z), z], [lean, t.rotationY, -lean * 0.6], [t.scale, t.scale * stretch, t.scale]);
+        }),
+        colors: foliageColors(
+          ofSpecies.map((t) => t.tone),
+          seed,
+        ),
       };
     });
-  }, [trees]);
+  }, [trees, colliders]);
 
   return (
     <group>
-      {groups.map(({ kind, transforms, parts }) =>
-        transforms.length === 0
-          ? null
-          : parts.map((part, i) => (
-              <InstancedPart
-                key={`${kind}-${i}`}
-                geometry={part.geometry}
-                material={part.lighten === null ? instancedMatte() : foliageMaterial()}
-                transforms={transforms}
-                local={part.local}
-                colors={part.colors}
-                castShadow
-              />
-            )),
+      {groups.map(({ species, transforms, colors }) =>
+        transforms.length === 0 ? null : (
+          <InstancedPart
+            key={species}
+            geometry={GEOMETRY[species]()}
+            material={species === "pine" ? pineMaterial() : broadleafMaterial()}
+            transforms={transforms}
+            colors={colors}
+            castShadow
+            receiveShadow
+          />
+        ),
       )}
 
       {colliders && (

@@ -12,8 +12,8 @@ import { Smoke } from "../props/Smoke";
 import { ZoneLabel } from "./ZoneLabel";
 
 const [X, Z] = ZONE_BY_ID.about.position;
-const TENT: [number, number] = [X - 2.6, Z - 0.9];
-const FIRE: [number, number] = [X + 1.1, Z + 0.4];
+export const TENT: [number, number] = [X - 2.6, Z - 0.9];
+export const FIRE: [number, number] = [X + 1.1, Z + 0.4];
 // A cyan tag on the pack marks this camp as interactive.
 const tag = singleton(() => createGlow(PALETTE.cyan, 0.8));
 

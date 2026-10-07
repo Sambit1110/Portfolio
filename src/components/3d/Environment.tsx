@@ -5,6 +5,7 @@ import { WORLD } from "@/config/world";
 import { useDeviceStore } from "@/stores/deviceStore";
 import { LAYOUT } from "@/lib/layout";
 import { Bushes } from "./Bushes";
+import { ContactShadows } from "./ContactShadows";
 import { GroundDetails } from "./GroundDetails";
 import { Monoliths } from "./Monoliths";
 import { Rocks } from "./Rocks";
@@ -18,6 +19,7 @@ import { Lighthouse } from "./zones/Lighthouse";
 import { MilestonePath } from "./zones/MilestonePath";
 import { Plaza } from "./zones/Plaza";
 import { Workshop } from "./zones/Workshop";
+import { CampDetails, LighthouseDetails, MilestoneDetails, WorkshopDetails } from "./zones/ZoneDetails";
 
 // Border forest chunked along its band (north, east, west strips, ~24 units per
 // segment). Each chunk's bounds hug the band, so none overlaps the playfield and
@@ -66,6 +68,7 @@ export function Environment() {
       <Water />
 
       <GroundDetails />
+      <ContactShadows />
 
       {/* Landmarks */}
       <Plaza />
@@ -74,6 +77,11 @@ export function Environment() {
       <MilestonePath />
       <Camp />
       <Lighthouse />
+      {/* Each landmark's hand-placed dressing. */}
+      <WorkshopDetails />
+      <CampDetails />
+      <MilestoneDetails />
+      <LighthouseDetails />
 
       {/* Interaction language: cyan rings and mushrooms around every zone. */}
       {ZONES.map((zone) => (
