@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+/* Golden Hour Meadow palette (locked). Cyan = interactive / technology / AI. */
+:root {
+  --sand: #e7c7a0;
+  --path: #d6a97c;
+  --teal: #23706a;
+  --jade: #3e9c84;
+  --amber: #f0a04b;
+  --coral: #e8735a;
+  --rock: #5e4e6a;
+  --dusk: #7a6a9c;
+  --cream: #fff6ea;
+  --lantern: #ffc66b;
+  --cyan: #5de0e6;
+  --ink: #2f2638;
+  /* Cyan darkened for text on cream: keeps the hue, passes contrast. */
+  --cyan-ink: #127a80;
+}
+
+@theme inline {
+  --color-sand: var(--sand);
+  --color-path: var(--path);
+  --color-teal: var(--teal);
+  --color-jade: var(--jade);
+  --color-amber: var(--amber);
+  --color-coral: var(--coral);
+  --color-rock: var(--rock);
+  --color-dusk: var(--dusk);
+  --color-cream: var(--cream);
+  --color-lantern: var(--lantern);
+  --color-cyan: var(--cyan);
+  --color-cyan-ink: var(--cyan-ink);
+  --color-ink: var(--ink);
+  --font-display: "Fredoka", ui-rounded, system-ui, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background: #e9cba5;
+  color: var(--ink);
+  font-family: var(--font-display);
+}
+
+canvas {
+  touch-action: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* Panel content reveal: header, then body, rising in a short stagger. */
+@keyframes panel-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.panel-stagger > * {
+  animation: panel-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.panel-stagger > :nth-child(1) { animation-delay: 70ms; }
+.panel-stagger > :nth-child(2) { animation-delay: 130ms; }
+.panel-stagger > :nth-child(3) { animation-delay: 180ms; }
+.panel-stagger > :nth-child(4) { animation-delay: 220ms; }
+.panel-stagger > :nth-child(n + 5) { animation-delay: 250ms; }
+
+/* Touch: no double-tap zoom, text selection or long-press callouts on game
+   controls. Pinch zoom stays available; page scrolling is untouched. */
+html {
+  touch-action: manipulation;
+}
+.no-callout {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Content panel: a side panel from 640px up (the approved desktop layout),
+   a bottom sheet on phones that rides above the on-screen keyboard. */
+.content-panel {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  width: min(420px, calc(100vw - 2rem));
+}
+@media (max-width: 639.98px) {
+  .content-panel {
+    top: auto;
+    left: max(0.5rem, env(safe-area-inset-left));
+    right: max(0.5rem, env(safe-area-inset-right));
+    bottom: calc(max(0.5rem, env(safe-area-inset-bottom)) + var(--keyboard-inset, 0px));
+    width: auto;
+    /* Only as tall as its content, leaving the world visible above it. */
+    max-height: min(66dvh, calc(100dvh - var(--keyboard-inset, 0px) - 4.75rem));
+  }
+  /* The AI Core may use the full height above the keyboard. */
+  .content-panel[data-target="zone:ai"] {
+    height: calc(100dvh - var(--keyboard-inset, 0px) - 4.75rem - env(safe-area-inset-top));
+    max-height: none;
+  }
+}
+
+/* Phone keyboard up: give the panel's space to the conversation. The header
+   compacts and the footer steps aside until the keyboard closes. */
+@media (max-width: 639.98px) {
+  .is-typing .content-panel .panel-footer {
+    display: none;
+  }
+  .is-typing .content-panel .panel-header {
+    margin-bottom: 0.75rem;
+  }
+  .is-typing .content-panel .panel-header > p,
+  .is-typing .content-panel .panel-header + p {
+    display: none;
+  }
+  .is-typing .content-panel .panel-header h2 {
+    font-size: 1.375rem;
+  }
+}
