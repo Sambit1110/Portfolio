@@ -1,13 +1,13 @@
 "use client";
 
 import { INTERACTABLE_BY_KEY, targetKey } from "@/lib/interactables";
-import { useWorldStore } from "@/stores/worldStore";
+import { interactionBlocked, useWorldStore } from "@/stores/worldStore";
 
 // Touch counterpart of "Press E": appears lower-right only when something is
 // in reach, and opens it exactly as E / Enter would.
 export function InteractButton() {
   const nearby = useWorldStore((s) => s.nearby);
-  const blocked = useWorldStore((s) => s.active !== null || s.menuOpen || s.pageView || s.vistaRequested || s.guidedTour?.phase === "touring");
+  const blocked = useWorldStore(interactionBlocked);
   const open = useWorldStore((s) => s.open);
   const target = nearby ? INTERACTABLE_BY_KEY.get(targetKey(nearby)) : undefined;
   const visible = target !== undefined && !blocked;

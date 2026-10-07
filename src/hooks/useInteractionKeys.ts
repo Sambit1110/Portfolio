@@ -2,15 +2,17 @@
 
 import { useEffect } from "react";
 import { KEYBOARD_MAP } from "@/config/controls";
-import { useWorldStore } from "@/stores/worldStore";
+import { interactionBlocked, useWorldStore } from "@/stores/worldStore";
 
 // Every movement key (WASD and arrows), by physical key code.
 const MOVEMENT_KEYS = new Set(KEYBOARD_MAP.flatMap((entry) => entry.keys));
 
-// Keys that must not trigger world actions while a control has focus.
-function isTypingTarget(target: EventTarget | null) {
-  return target instanceof HTMLElement && target.closest("button, a, input, textarea, select, [contenteditable]") !== null;
-}
+// Fields that take typed text: there E is a letter and Enter submits.
+const TEXT_ENTRY = "input, textarea, select, [contenteditable]";
+// Controls Enter activates by itself (a focused button or link), plus text fields.
+const ENTER_TARGETS = `button, a, ${TEXT_ENTRY}`;
+
+const within = (target: EventTarget | null, selector: string) => target instanceof HTMLElement && target.closest(selector) !== null;
 
 // E / Enter opens whatever the player stands at; Escape closes whatever is open,
 // innermost first.
@@ -43,9 +45,13 @@ export function useInteractionKeys() {
         return;
       }
 
-      const interact = event.key === "e" || event.key === "E" || event.key === "Enter";
-      if (!interact || event.repeat || isTypingTarget(event.target)) return;
-      if (touring || store.active || store.menuOpen || store.pageView || !store.nearby) return;
+      const enter = event.key === "Enter";
+      if (!(enter || event.key === "e" || event.key === "E") || event.repeat) return;
+      // A focused button keeps Enter for itself, but not E: E only stops
+      // short of fields where it would type. (A clicked HUD button, such as
+      // Sound or Menu, keeps focus while the visitor walks on.)
+      if (within(event.target, enter ? ENTER_TARGETS : TEXT_ENTRY)) return;
+      if (interactionBlocked(store) || !store.nearby) return;
       event.preventDefault();
       store.open(store.nearby);
     };

@@ -149,6 +149,12 @@ export const useWorldStore = create<WorldState>((set) => ({
   endTour: (completed) => set((s) => (s.guidedTour?.phase === "touring" ? endedTour(completed) : s)),
 }));
 
+// While true, nothing nearby can be opened: the "Press E" prompt and the touch
+// interact button hide, and E / Enter do nothing. One rule for all three, so a
+// visible prompt always means E works.
+export const interactionBlocked = (s: Pick<WorldState, "active" | "menuOpen" | "pageView" | "vistaRequested" | "guidedTour">) =>
+  s.active !== null || s.menuOpen || s.pageView || s.vistaRequested || s.guidedTour?.phase === "touring";
+
 export const isTouring = () => useWorldStore.getState().guidedTour?.phase === "touring";
 
 // True while a UI layer owns the keyboard, or the tour is driving: the

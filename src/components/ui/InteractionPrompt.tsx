@@ -1,13 +1,13 @@
 "use client";
 
 import { INTERACTABLE_BY_KEY, targetKey } from "@/lib/interactables";
-import { useWorldStore } from "@/stores/worldStore";
+import { interactionBlocked, useWorldStore } from "@/stores/worldStore";
 
 // "Press E" pill shown while the player stands at something interactive.
 // Clickable too.
 export function InteractionPrompt() {
   const nearby = useWorldStore((s) => s.nearby);
-  const blocked = useWorldStore((s) => s.active !== null || s.menuOpen || s.pageView || s.vistaRequested || s.guidedTour?.phase === "touring");
+  const blocked = useWorldStore(interactionBlocked);
   const open = useWorldStore((s) => s.open);
   const target = nearby ? INTERACTABLE_BY_KEY.get(targetKey(nearby)) : undefined;
   const visible = target !== undefined && !blocked;
