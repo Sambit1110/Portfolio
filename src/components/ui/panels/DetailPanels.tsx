@@ -6,12 +6,16 @@ import { SKILL_CATEGORIES } from "@/content/skills";
 import { Chips } from "@/components/content/Chips";
 import { CertificateEntry, EducationEntry, ExperienceEntry } from "@/components/content/Entries";
 import { ProjectDetails } from "@/components/content/ProjectDetails";
+import { useProjectCollection } from "@/components/content/ProjectCollection";
+import { RepositoryDetails } from "@/components/content/RepositoryDetails";
+import { repositoryCategory } from "@/lib/github/repositories";
 import { MILESTONES } from "@/lib/placements";
 import { PanelHeader } from "./PanelHeader";
 
 // Panels for single objects in the world: a pedestal, crystal, milestone or frame.
 
 export function ProjectPanel({ id }: { id: string }) {
+  const { curated } = useProjectCollection();
   const project = PROJECTS.find((p) => p.id === id);
   if (!project) return null;
   return (
@@ -21,7 +25,25 @@ export function ProjectPanel({ id }: { id: string }) {
         title={project.name}
         back={{ label: "All projects", target: { kind: "zone", id: "projects" } }}
       />
-      <ProjectDetails project={project} />
+      <ProjectDetails project={project} repository={curated[project.id]} />
+    </>
+  );
+}
+
+// One of the portfolio's own starred GitHub repositories, opened from the
+// Projects list.
+export function RepositoryPanel({ id }: { id: string }) {
+  const { repositories } = useProjectCollection();
+  const repo = repositories.find((r) => r.fullName === id);
+  if (!repo) return null;
+  return (
+    <>
+      <PanelHeader
+        eyebrow={repositoryCategory(repo)}
+        title={repo.name}
+        back={{ label: "All projects", target: { kind: "zone", id: "projects" } }}
+      />
+      <RepositoryDetails repo={repo} />
     </>
   );
 }

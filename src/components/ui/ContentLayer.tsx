@@ -17,13 +17,24 @@ export function ContentLayer({ children }: { children: ReactNode }) {
   useEffect(() => {
     const el = layer.current;
     if (!el) return;
-    for (const control of el.querySelectorAll<HTMLElement>("a[href], button")) {
-      if (pageView) control.removeAttribute("tabindex");
-      else control.setAttribute("tabindex", "-1");
-    }
+    const sync = () => {
+      for (const control of el.querySelectorAll<HTMLElement>("a[href], button")) {
+        if (pageView) control.removeAttribute("tabindex");
+        else control.setAttribute("tabindex", "-1");
+      }
+    };
+    sync();
     // Opening the page moves focus into it, so the keyboard scrolls it and screen
     // readers carry on from the portfolio instead of the top of the document.
-    if (pageView) el.focus({ preventScroll: true });
+    if (pageView) {
+      el.focus({ preventScroll: true });
+      return;
+    }
+    // Entries added while hidden ("Show more" pressed by a screen reader) leave
+    // the Tab order too.
+    const observer = new MutationObserver(sync);
+    observer.observe(el, { childList: true, subtree: true });
+    return () => observer.disconnect();
   }, [pageView]);
 
   return (

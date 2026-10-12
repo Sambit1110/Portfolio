@@ -1,9 +1,12 @@
 import type { Project } from "@/content/projects";
 import { Chips } from "./Chips";
+import type { ProjectRepository } from "@/lib/github/repositories";
+import { ProjectRepositoryLink } from "./RepositoryDetails";
 
-// Description and technologies for one project. The caller renders the name as
-// a heading at the right level for its context.
-export function ProjectDetails({ project }: { project: Project }) {
+// Description and technologies for one project, and a link to its code when it
+// has a public repository. The caller renders the name as a heading at the
+// right level for its context.
+export function ProjectDetails({ project, repository }: { project: Project; repository?: ProjectRepository }) {
   return (
     <div className="space-y-4">
       {project.status === "experimental" && (
@@ -16,6 +19,7 @@ export function ProjectDetails({ project }: { project: Project }) {
         <p className="mb-2 text-xs font-semibold tracking-[0.16em] text-rock uppercase">Built with</p>
         <Chips items={project.technologies} label={`Technologies used in ${project.name}`} />
       </div>
+      {repository && <ProjectRepositoryLink repository={repository} />}
     </div>
   );
 }

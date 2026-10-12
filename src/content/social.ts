@@ -9,9 +9,10 @@ export type SocialLink = {
 };
 
 export const EMAIL = "sambitbiswas1110@gmail.com";
+export const GITHUB_USER = "Sambit1110";
 
 export const SOCIAL_LINKS: SocialLink[] = [
-  { id: "github", label: "GitHub", display: "github.com/Sambit1110", href: "https://github.com/Sambit1110" },
+  { id: "github", label: "GitHub", display: `github.com/${GITHUB_USER}`, href: `https://github.com/${GITHUB_USER}` },
   {
     id: "linkedin",
     label: "LinkedIn",

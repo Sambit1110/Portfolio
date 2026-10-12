@@ -4,13 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { sameTarget, targetKey, type Target } from "@/lib/interactables";
 import { useWorldStore } from "@/stores/worldStore";
 import { AICorePanel } from "./AICorePanel";
-import { CertificatePanel, MilestonePanel, ProjectPanel, SkillPanel } from "./DetailPanels";
+import { CertificatePanel, MilestonePanel, ProjectPanel, RepositoryPanel, SkillPanel } from "./DetailPanels";
 import { AboutPanel, ContactPanel, ExperiencePanel, ProjectsPanel, SkillsPanel } from "./ZonePanels";
 
 function PanelBody({ target }: { target: Target }) {
   switch (target.kind) {
     case "project":
       return <ProjectPanel id={target.id} />;
+    case "repository":
+      return <RepositoryPanel id={target.id} />;
     case "skill":
       return <SkillPanel id={target.id} />;
     case "milestone":
@@ -57,6 +59,7 @@ export function ContentPanel() {
   }, [active]);
 
   const target = active ?? shown;
+  const ownScroll = target !== null && targetKey(target) === "zone:projects";
   const key = active ? targetKey(active) : null;
 
   // When a new target opens, start at the top and move focus in: to the panel's
@@ -98,9 +101,14 @@ export function ContentPanel() {
       {target && (
         <>
           <div className="h-1.5 shrink-0 rounded-t-3xl bg-gradient-to-r from-cyan via-cyan/60 to-transparent" />
-          <div ref={scroller} className="min-h-0 flex-1 overscroll-contain overflow-y-auto px-7 pt-6 pb-6 max-sm:px-5 max-sm:pt-5">
+          {/* The Projects panel scrolls its list on its own, under a fixed header,
+              so this column passes its height down instead of scrolling. */}
+          <div
+            ref={scroller}
+            className={`min-h-0 flex-1 overscroll-contain overflow-y-auto px-7 pt-6 pb-6 max-sm:px-5 max-sm:pt-5 ${ownScroll ? "flex flex-col" : ""}`}
+          >
             {/* Keyed per target, so each opening replays the staggered reveal. */}
-            <div key={targetKey(target)} className="panel-stagger">
+            <div key={targetKey(target)} className={`panel-stagger ${ownScroll ? "flex min-h-0 flex-1 flex-col" : ""}`}>
               <PanelBody target={target} />
             </div>
           </div>

@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { PerspectiveCamera } from "@react-three/drei";
 import { CAMERA, PLAYER } from "@/config/world";
-import { INTERACTABLE_BY_KEY, targetKey } from "@/lib/interactables";
+import { placeOf } from "@/lib/interactables";
 import { TOUR_STOPS } from "@/lib/tour";
 import { useWorldStore } from "@/stores/worldStore";
 import { runtime, setPoint } from "@/stores/runtime";
@@ -104,7 +104,7 @@ export function FollowCamera({ target }: FollowCameraProps) {
 
     const { active, vistaRequested, guidedTour } = useWorldStore.getState();
     const reduced = runtime.reducedMotion;
-    const opened = active ? INTERACTABLE_BY_KEY.get(targetKey(active)) : undefined;
+    const opened = active ? placeOf(active) : undefined;
     const tourStop = guidedTour?.phase === "touring" && guidedTour.arrived ? TOUR_STOPS[guidedTour.stop] : undefined;
     const focusPoint = opened?.position ?? tourStop?.focus;
     const pf = panel.current;

@@ -5,7 +5,9 @@ import { ZONES, type ZoneId } from "@/content/zones";
 import { CERTIFICATE_FRAMES, MILESTONES, PEDESTALS, SKILL_NODES } from "@/lib/placements";
 import type { Point } from "@/lib/paths";
 
-export type TargetKind = "zone" | "project" | "skill" | "milestone" | "certificate";
+// "repository": a starred GitHub repository. It has no object in the world and
+// is opened from the Projects list, so it belongs to the workshop.
+export type TargetKind = "zone" | "project" | "skill" | "milestone" | "certificate" | "repository";
 export type Target = { kind: TargetKind; id: string };
 
 export type Interactable = Target & {
@@ -42,7 +44,12 @@ export const INTERACTABLES: Interactable[] = [
 
 export const INTERACTABLE_BY_KEY = new Map(INTERACTABLES.map((i) => [i.key, i]));
 
-export const zoneOf = (t: Target | null): ZoneId | null => (t ? (INTERACTABLE_BY_KEY.get(targetKey(t))?.zone ?? null) : null);
+// Where a target lives in the world: its own object, or for a repository the
+// Projects zone it is listed in.
+export const placeOf = (t: Target): Interactable | undefined =>
+  INTERACTABLE_BY_KEY.get(t.kind === "repository" ? "zone:projects" : targetKey(t));
+
+export const zoneOf = (t: Target | null): ZoneId | null => (t ? (placeOf(t)?.zone ?? null) : null);
 
 export const sameTarget = (a: Target | null, b: Target | null) =>
   a !== null && b !== null && a.kind === b.kind && a.id === b.id;

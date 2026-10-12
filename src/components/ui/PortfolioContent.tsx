@@ -8,6 +8,8 @@ import { Chips } from "@/components/content/Chips";
 import { ContactLinks } from "@/components/content/ContactLinks";
 import { CertificateEntry, EducationEntry, ExperienceEntry } from "@/components/content/Entries";
 import { ProjectDetails } from "@/components/content/ProjectDetails";
+import { RepositoryArticles } from "@/components/content/RepositoryArticles";
+import { CURATED_ONLY, type ProjectRepository } from "@/lib/github/repositories";
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
@@ -23,7 +25,9 @@ function Section({ id, title, children }: { id: string; title: string; children:
 // The whole portfolio as semantic HTML, rendered on the server from the same
 // content files as the 3D world. It is the accessible path through the site,
 // the "View as a page" mode and the fallback when WebGL is unavailable.
-export function PortfolioContent() {
+// `curated`: repository facts for the curated projects; the starred
+// repositories come from the surrounding ProjectCollectionProvider.
+export function PortfolioContent({ curated = CURATED_ONLY.curated }: { curated?: Record<string, ProjectRepository> }) {
   return (
     <main id="portfolio" className="mx-auto max-w-2xl px-6 py-16 text-ink">
       <header>
@@ -51,10 +55,11 @@ export function PortfolioContent() {
               <h3 id={`project-${project.id}`} className="mb-3 text-xl font-semibold">
                 {project.name}
               </h3>
-              <ProjectDetails project={project} />
+              <ProjectDetails project={project} repository={curated[project.id]} />
             </article>
           ))}
         </div>
+        <RepositoryArticles />
       </Section>
 
       <Section id="skills" title="Skills">

@@ -11,6 +11,10 @@ export type Project = {
   description: string;
   technologies: string[];
   status?: "experimental";
+  // Its GitHub repository ("owner/name"), when it has a public one. Links the
+  // project to its code, and keeps the repository from being listed twice when
+  // it is also starred.
+  repository?: string;
 };
 
 export const PROJECTS: Project[] = [
@@ -22,6 +26,7 @@ export const PROJECTS: Project[] = [
     description:
       "A privacy-focused terminal AI assistant designed to run locally without relying on cloud inference. SAMY uses local language models and llama.cpp to provide an offline conversational experience while keeping user data on-device.",
     technologies: ["Python", "llama.cpp", "GGUF", "Local LLM inference", "CLI", "AI/ML"],
+    repository: "Sambit1110/SAMY-Terminal",
   },
   {
     id: "hirelabs",
@@ -44,6 +49,7 @@ export const PROJECTS: Project[] = [
       "TF-IDF",
       "Machine Learning",
     ],
+    repository: "Sambit1110/HireLabs-Platform",
   },
   {
     id: "email-threat-intelligence",
@@ -83,5 +89,6 @@ export const PROJECTS: Project[] = [
       "An experimental recommendation system that uses AI to understand a user's emotional state and suggest music accordingly.",
     technologies: ["AI/ML", "Recommendation Systems", "Emotion Detection"],
     status: "experimental",
+    repository: "Sambit1110/mood-music-recommender",
   },
 ];

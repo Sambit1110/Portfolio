@@ -134,6 +134,17 @@ html {
     height: calc(100dvh - var(--keyboard-inset, 0px) - 4.75rem - env(safe-area-inset-top));
     max-height: none;
   }
+  /* The Projects list may grow as tall, below the top controls; its rows
+     scroll inside it. */
+  .content-panel[data-target="zone:projects"] {
+    max-height: calc(100dvh - var(--keyboard-inset, 0px) - 4.75rem - env(safe-area-inset-top));
+  }
+}
+/* Short phone screens: the list's one-line hint makes way for more rows. */
+@media (max-width: 639.98px) and (max-height: 700px) {
+  .content-panel[data-target="zone:projects"] .panel-header + p {
+    display: none;
+  }
 }
 
 /* Phone keyboard up: give the panel's space to the conversation. The header
